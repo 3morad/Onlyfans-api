@@ -40,9 +40,10 @@ class AirtableClient:
     def upsert(self, records: list[dict], merge_on: str) -> dict:
         """Upsert records (list of {"fields": {...}}) matched on `merge_on`.
 
-        Returns counts of created/updated. Batches of 10 per Airtable limits.
+        Returns {"created", "updated", "records"} where `records` are the
+        upserted Airtable records (with ids + fields). Batches of 10 per limits.
         """
-        created, updated = 0, 0
+        created, updated, out = 0, 0, []
         for i in range(0, len(records), 10):
             batch = records[i : i + 10]
             body = {
@@ -53,7 +54,8 @@ class AirtableClient:
             data = self._patch(body)
             created += len(data.get("createdRecords", []))
             updated += len(data.get("updatedRecords", []))
-        return {"created": created, "updated": updated}
+            out.extend(data.get("records", []))
+        return {"created": created, "updated": updated, "records": out}
 
     def _patch(self, body: dict, max_retries: int = 5) -> dict:
         backoff = 2.0

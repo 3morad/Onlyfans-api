@@ -1,14 +1,18 @@
 # SFS Tracking Sync
 
 Pulls **SFS campaign** tracking-link stats from the [OnlyFans API](https://app.onlyfansapi.com)
-for all connected model accounts and upserts **daily** results into Airtable.
+for all connected model accounts and refreshes **two linked Airtable tables** every run:
 
-- **One row per SFS tracking link per DAY** (incremental, not cumulative):
-  `Date · Donor / Page · SFS Model · Clicks · New Subscribers · Subscription CVR · AEPS · Spenders · Sales · Spending CVR`
-- Only links whose campaign name starts with **`New SFS`** are synced.
-- Days with no activity are skipped (set `INCLUDE_ZERO_DAYS=true` to keep them).
-- Idempotent: re-running upserts each day's row (matched on **`Sync Key`** =
-  `{link_id}_{YYYY-MM-DD}`), so late-attributed revenue is corrected automatically.
+- **`SFS Tracking`** — one row per campaign, **cumulative** totals (from the stats
+  `summary`). Upserted on **`Link ID`**.
+- **`SFS Daily`** — one row per campaign **per day**, **incremental** values (from
+  `daily_metrics`). Upserted on **`Sync Key`** = `{link_id}_{YYYY-MM-DD}`. Each daily
+  row links back to its campaign in `SFS Tracking` via the **`Campaign Link`** field.
+
+Only links whose campaign name starts with **`New SFS`** are synced. By default a
+daily row is written for **every day since the campaign was created** (incl. zero
+days); set `INCLUDE_ZERO_DAYS=false` to log only active days. Idempotent — re-running
+upserts the same rows, so late-attributed revenue self-corrects.
 
 ## What maps to what
 

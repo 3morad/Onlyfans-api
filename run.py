@@ -29,11 +29,14 @@ def cmd_sync(args):
     result = sync.run(dry_run=args.dry_run, only_account=args.account)
     print("\n=== Summary ===")
     for model, n in result.get("per_model", {}).items():
-        print(f"  {model}: {n} SFS links")
+        print(f"  {model}: {n['campaigns']} campaigns, {n['daily_rows']} daily rows")
+    print(f"  TOTAL: {result['campaigns']} campaigns, {result['daily_rows']} daily rows")
     if args.dry_run:
-        print(f"  DRY RUN - {result['records']} rows (nothing written).")
+        print("  DRY RUN - nothing written.")
     else:
-        print(f"  {result['records']} rows -> Airtable: {result.get('created', 0)} created, {result.get('updated', 0)} updated.")
+        t, d = result["tracking"], result["daily"]
+        print(f"  SFS Tracking -> {t['created']} created, {t['updated']} updated")
+        print(f"  SFS Daily    -> {d['created']} created, {d['updated']} updated")
 
 
 def cmd_accounts(args):

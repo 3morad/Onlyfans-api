@@ -24,17 +24,24 @@ ONLYFANS_API_BASE = os.getenv("ONLYFANS_API_BASE", "https://app.onlyfansapi.com/
 # --- Airtable ---
 AIRTABLE_API_KEY = os.getenv("AIRTABLE_API_KEY", "").strip()
 AIRTABLE_BASE_ID = os.getenv("AIRTABLE_BASE_ID", "apppn8mDeO3pvAFpc").strip()
-AIRTABLE_TABLE_NAME = os.getenv("AIRTABLE_TABLE_NAME", "SFS Daily").strip()
+
+# Two tables, refreshed every run:
+#   - SFS Tracking: one row per campaign (cumulative, from the API summary). Key = Link ID.
+#   - SFS Daily:    one row per campaign per day (incremental). Key = Sync Key.
+#                   Each daily row links back to its campaign in SFS Tracking.
+AIRTABLE_TABLE_NAME = os.getenv("AIRTABLE_TABLE_NAME", "SFS Tracking").strip()
+AIRTABLE_DAILY_TABLE = os.getenv("AIRTABLE_DAILY_TABLE", "SFS Daily").strip()
+
+CUMULATIVE_MERGE_FIELD = "Link ID"       # upsert key for SFS Tracking
+DAILY_MERGE_FIELD = "Sync Key"           # upsert key for SFS Daily
+CAMPAIGN_LINK_FIELD = "Campaign Link"    # linked-record field in SFS Daily -> SFS Tracking
 
 # --- Sync ---
 SFS_PREFIX = os.getenv("SFS_PREFIX", "New SFS").strip()
 
-# Write one row per campaign per DAY (incremental). Days with no activity are
-# skipped unless INCLUDE_ZERO_DAYS=true.
-INCLUDE_ZERO_DAYS = os.getenv("INCLUDE_ZERO_DAYS", "false").strip().lower() in ("1", "true", "yes")
-
-# Upsert key field in Airtable. One row per (tracking link, day): "{link_id}_{YYYY-MM-DD}".
-MERGE_FIELD = "Sync Key"
+# Log one SFS Daily row for every day since the campaign was created (incl. zero
+# days). Set INCLUDE_ZERO_DAYS=false to log only days that had activity.
+INCLUDE_ZERO_DAYS = os.getenv("INCLUDE_ZERO_DAYS", "true").strip().lower() in ("1", "true", "yes")
 
 
 def require_onlyfans() -> str:
