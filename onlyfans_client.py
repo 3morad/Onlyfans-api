@@ -4,6 +4,10 @@ Endpoints used:
   GET /api/accounts                                      -> list connected accounts
   GET /api/{account}/tracking-links                      -> list tracking links (cumulative)
   GET /api/{account}/tracking-links/{id}/stats           -> summary + daily/monthly metrics
+
+The raw REST API returns the payload directly (e.g. /api/accounts is a JSON list,
+tracking-links/stats are {"data": {...}, "_meta": {...}}). `_unwrap` also tolerates
+the {"status", "response"} envelope used by the MCP wrapper.
 """
 from __future__ import annotations
 
@@ -36,7 +40,7 @@ class OnlyFansClient:
         )
 
     # --- low level ---
-    def _get(self, path: str, params: dict | None = None, max_retries: int = 5) -> dict:
+    def _get(self, path: str, params: dict | None = None, max_retries: int = 5) -> dict | list:
         url = path if path.startswith("http") else f"{self.base_url}/{path.lstrip('/')}"
         backoff = 2.0
         for attempt in range(1, max_retries + 1):
@@ -55,29 +59,37 @@ class OnlyFansClient:
             return resp.json()
         raise OnlyFansError(f"GET {url} exhausted retries.")
 
+    @staticmethod
+    def _unwrap(data):
+        """Strip the MCP-style {"status","response"} envelope if present."""
+        if isinstance(data, dict) and "status" in data and "response" in data:
+            return data["response"]
+        return data
+
     # --- API methods ---
     def list_accounts(self) -> list[dict]:
-        data = self._get("accounts")
-        return data.get("response", data.get("data", []))
+        data = self._unwrap(self._get("accounts"))
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict):
+            inner = data.get("data", data.get("list", []))
+            return inner if isinstance(inner, list) else []
+        return []
 
     def iter_tracking_links(self, account_id: str, page_size: int = 50) -> Iterator[dict]:
-        """Yield every tracking link for an account (cumulative stats included)."""
+        """Yield every tracking link for an account."""
         offset = 0
         while True:
-            data = self._get(
+            data = self._unwrap(self._get(
                 f"{account_id}/tracking-links",
-                params={
-                    "limit": page_size,
-                    "offset": offset,
-                    "sortby": "created_date",
-                    "sort": "desc",
-                },
-            )
-            payload = data.get("response", {}).get("data", {})
-            items = payload.get("list", [])
+                params={"limit": page_size, "offset": offset, "sortby": "created_date", "sort": "desc"},
+            ))
+            payload = data.get("data", data) if isinstance(data, dict) else {}
+            items = payload.get("list", []) if isinstance(payload, dict) else []
             for item in items:
                 yield item
-            if not payload.get("hasMore") or not items:
+            has_more = isinstance(payload, dict) and payload.get("hasMore")
+            if not has_more or not items:
                 break
             offset += page_size
 
@@ -94,5 +106,7 @@ class OnlyFansClient:
             params["date_start"] = date_start
         if date_end:
             params["date_end"] = date_end
-        data = self._get(f"{account_id}/tracking-links/{link_id}/stats", params=params or None)
-        return data.get("response", {}).get("data", {})
+        data = self._unwrap(self._get(f"{account_id}/tracking-links/{link_id}/stats", params=params or None))
+        if isinstance(data, dict):
+            return data.get("data", data)
+        return {}
