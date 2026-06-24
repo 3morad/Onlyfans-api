@@ -1,0 +1,41 @@
+# ---- Secrets (NEVER commit) ----
+.env
+*.pem
+*.key
+
+# ---- Logs ----
+logs/
+*.log
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+
+# ---- OS / Office temp ----
+Thumbs.db
+.DS_Store
+~$*
+
+# ---- Unrelated docs / data (not part of this project) ----
+# RustDesk server guide lives here but isn't part of the scraper
+RustDesk-Server-Setup-Guide*.md
+RustDesk-Server-Setup-Guide*.docx
+# Source model sheet / any spreadsheets (sensitive, kept out of git)
+*.xlsx
+*.xls
+*.csv
+
+# ---- Editor / tooling ----
+.claude/
+.vscode/
+.idea/
+
+# ---- Throwaway build/scratch ----
+_docbuild/
+_records.json
+_check.txt
+_seed_preview.py
