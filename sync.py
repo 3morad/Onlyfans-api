@@ -170,13 +170,17 @@ def run(dry_run: bool = False, only_account: str | None = None) -> dict:
 
     cumulative, daily_pairs, per_model = collect(of, accounts, config.SFS_PREFIX)
     log.info("Collected %d campaigns (cumulative) and %d daily rows.", len(cumulative), len(daily_pairs))
+    log.info("OnlyFans API requests this run: %d (~%d credits @ 1 credit/request).",
+             of.request_count, of.request_count)
 
     if dry_run:
         for fields, _ in sorted(daily_pairs, key=lambda p: (p[0]["fields"]["SFS Model"], p[0]["fields"]["Campaign"], p[0]["fields"]["Date"])):
             f = fields["fields"]
             log.info("  %s | %-15s | %-20s | clk=%-3s subs=%-3s sales=%-6s sp=%s",
                      f["Date"], f["SFS Model"], f["Donor / Page"], f["Clicks"], f["New Subscribers"], f["Sales"], f["Spenders"])
-        return {"campaigns": len(cumulative), "daily_rows": len(daily_pairs), "per_model": per_model, "dry_run": True}
+        return {"campaigns": len(cumulative), "daily_rows": len(daily_pairs), "per_model": per_model,
+                "accounts": len(accounts), "api_requests": of.request_count,
+                "credit_headers": of.credit_headers, "dry_run": True}
 
     api_key = config.require_airtable()
 
@@ -206,4 +210,6 @@ def run(dry_run: bool = False, only_account: str | None = None) -> dict:
         "tracking": {"created": res_cum["created"], "updated": res_cum["updated"]},
         "daily": {"created": res_daily["created"], "updated": res_daily["updated"]},
         "per_model": per_model,
+        "accounts": len(accounts), "api_requests": of.request_count,
+        "credit_headers": of.credit_headers,
     }

@@ -30,6 +30,11 @@ class OnlyFansClient:
             raise OnlyFansError("ONLYFANS_API_KEY is not set.")
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+        # Cost tracking: each successful account-specific request costs ~1 credit
+        # (onlyfansapi bills 1 credit/request). request_count is our estimate;
+        # credit_headers captures whatever the API actually reports, if anything.
+        self.request_count = 0
+        self.credit_headers: dict = {}
         self.session = requests.Session()
         self.session.headers.update(
             {
@@ -56,6 +61,11 @@ class OnlyFansClient:
                 raise OnlyFansError("401 Unauthorized - check ONLYFANS_API_KEY.")
             if not resp.ok:
                 raise OnlyFansError(f"GET {url} failed: {resp.status_code} {resp.text[:300]}")
+            self.request_count += 1
+            for hk, hv in resp.headers.items():
+                lk = hk.lower()
+                if "credit" in lk or "ratelimit-remaining" in lk:
+                    self.credit_headers[hk] = hv
             return resp.json()
         raise OnlyFansError(f"GET {url} exhausted retries.")
 

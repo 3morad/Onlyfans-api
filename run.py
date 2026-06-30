@@ -38,6 +38,14 @@ def cmd_sync(args):
         print(f"  SFS Tracking -> {t['created']} created, {t['updated']} updated")
         print(f"  SFS Daily    -> {d['created']} created, {d['updated']} updated")
 
+    req = result.get("api_requests", 0)
+    accts = result.get("accounts", 0) or 1
+    print("  --- API cost (OnlyFans) ---")
+    print(f"  This run: ~{req} credits across {accts} account(s) @ 1 credit/request")
+    print(f"  If run daily: ~{req * 30} credits/month vs ~{accts * 10000} included ({accts} x 10,000)")
+    if result.get("credit_headers"):
+        print(f"  API-reported: {result['credit_headers']}")
+
 
 def cmd_accounts(args):
     from onlyfans_client import OnlyFansClient
